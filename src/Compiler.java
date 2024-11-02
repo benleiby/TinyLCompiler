@@ -2,6 +2,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -11,7 +12,9 @@ public class Compiler {
     static int i;
     static char [] charStream;
     static String inputFileName;
+    final static String outputFileName = "tinyL.out";
     static Set<Character> letters = new HashSet<>();
+    static ArrayList<String> riscCommands = new ArrayList<>();
 
     public static void main (String[] args) {
 
@@ -32,6 +35,7 @@ public class Compiler {
         // Get the input file name from the arguments
         inputFileName = args[0];
         File inputFile = new File(inputFileName);
+        File outputFile = new File(outputFileName);
 
         charStream = new char[0];
 
@@ -49,6 +53,7 @@ public class Compiler {
 
         i = 0;
         token = charStream[i];
+
         program();
 
     }
@@ -58,7 +63,7 @@ public class Compiler {
             i++;
             token = charStream[i];
         } else {
-            token = '\0';
+            token = '\0'; // end of file
         }
     }
 
@@ -83,45 +88,18 @@ public class Compiler {
 
     static void morestmts() {
 
+        if (token == ';') {
+            nextToken();
+            stmtlist();
+        }
+        else if (token != '!') {
+            System.err.println("Incomplete Statement");
+            System. exit(0);
+        }
+        else
+            System.out.println("end of statement list");
+
     }
-
-    /*
-     *********************************************
-     *  314 Principles of Programming Languages  *
-     *********************************************
-     */
-
-    /* -------------------------------------------------
-
-                CFG for tinyL LANGUAGE
-
-         <program> ::= <stmt_list> !
-        <stmt list> ::= <stmt> <morestmts>
-        <morestmts> ::= ; <stmt list> | ε
-        <stmt> 	::= <assign> | <read> | <print>
-        <assign> ::= <variable> = <expr>
-        <read> 	::= ? <variable>
-        <print> ::= % <variable>
-        <expr> ::= 	+ <expr> <expr> |
-                    − <expr> <expr> |
-                    ∗ <expr> <expr> |
-                    & <expr> <expr> |
-                    | <expr> <expr> |
-                    <variable> |
-                    <digit>
-        <variable> 	::= a | b | c | d | e | f
-        <digit> 	::= 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
-
-         NOTE: tokens are exactly a single character long
-
-         Example expressions:
-
-                a=+2+25;%a!
-                a=|2&3|25;%a!
-
-
-     ---------------------------------------------------
-     */
 
     static void stmt() {
 
@@ -135,7 +113,7 @@ public class Compiler {
             print();
         }
         else {
-            System.err.println("Program must contain at least 1 statement.");
+            System.err.println("Incomplete Statement.");
             System. exit(0);
         }
 
@@ -194,18 +172,43 @@ public class Compiler {
     }
 
     private static void bitOr() {
+
+        System.out.println("bit OR");
+
+        nextToken();
+        expr();
+        expr();
+
     }
 
     private static void bitAnd() {
-        
+
+        System.out.println("bit AND");
+
+        nextToken();
+        expr();
+        expr();
+
     }
 
     private static void multiply() {
-        
+
+        System.out.println("multiplication");
+
+        nextToken();
+        expr();
+        expr();
+
     }
 
     private static void subtract() {
-        
+
+        System.out.println("subtraction");
+
+        nextToken();
+        expr();
+        expr();
+
     }
 
     private static void add() {
@@ -224,11 +227,29 @@ public class Compiler {
     }
 
     static void read() {
-        // YOUR CODE GOES HERE
+
+        System.out.println("read");
+        nextToken();
+
+        if (letters.contains(token)) {
+            System.out.println("variable " + token);
+        }
+
+        nextToken();
+
     }
 
     static void print() {
-        // YOUR CODE GOES HERE
+
+        System.out.println("print");
+        nextToken();
+
+        if (letters.contains(token)) {
+            System.out.println("variable " + token);
+        }
+
+        nextToken();
+
     }
 
     static char [] readInputFile(File file) throws IOException {
