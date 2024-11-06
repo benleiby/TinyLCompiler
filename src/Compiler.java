@@ -1,20 +1,17 @@
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Set;
+import java.io.*;
+import java.util.*;
 
 public class Compiler {
 
     static char token;
     static int i;
+    static int register;
     static char [] charStream;
     static String inputFileName;
     final static String outputFileName = "tinyL.out";
     static Set<Character> letters = new HashSet<>();
-    static ArrayList<String> riscCommands = new ArrayList<>();
+    static ArrayList<String> targetCode = new ArrayList<>();
+    static PrintWriter output;
 
     public static void main (String[] args) {
 
@@ -41,6 +38,7 @@ public class Compiler {
 
         try {
             charStream = readInputFile(inputFile);
+            output = new PrintWriter(outputFile);
 
         } catch (Exception e) {
             System.out.println(e.getMessage());
@@ -54,8 +52,39 @@ public class Compiler {
         i = 0;
         token = charStream[i];
 
+        register = 1;
+
         program();
 
+        System.out.println("------------------------------------------------");
+        System.out.println("Target Code");
+        System.out.println("------------------------------------------------");
+        for (String o : targetCode) {
+            System.out.println(o);
+            output.println(o);
+        }
+
+        output.close();
+
+    }
+
+    static void codeGen(String opCode, String field1, String field2, String field3) {
+
+        StringBuilder instruction = new StringBuilder(opCode + " " + field1);
+
+        // For LOADI, prefix field2 with '#' to indicate a constant
+        if (field2 != null) {
+            if (opCode.equals("LOADI")) {
+                instruction.append(" #").append(field2);  // Prefix '#' for constants
+            } else {
+                instruction.append(" ").append(field2);
+            }
+        }
+        if (field3 != null) {
+            instruction.append(" ").append(field3);
+        }
+
+        targetCode.add(instruction.toString());
     }
 
     static void nextToken() {
@@ -65,6 +94,10 @@ public class Compiler {
         } else {
             token = '\0'; // end of file
         }
+    }
+
+    static int nextRegister() {
+        return register++;
     }
 
     // Routines for recursive descending parser LL(1)
@@ -77,7 +110,7 @@ public class Compiler {
             System. exit(0);
         }
         else
-            System.out.println(inputFileName + " compiled successfully to: ");
+            System.out.println(inputFileName + " compiled successfully to: " + outputFileName);
 
     }
 
@@ -119,10 +152,46 @@ public class Compiler {
 
     }
 
+    static int expr() {
+
+        if (token == '+') {
+            nextToken();
+            return add();
+        }
+        else if (token == '-') {
+            nextToken();
+            return subtract();
+        }
+        else if (token == '*') {
+            nextToken();
+            return multiply();
+        }
+        else if (token == '&') {
+            nextToken();
+            return bitAnd();
+        }
+        else if (token == '|') {
+            nextToken();
+            return bitOr();
+        }
+        else if (letters.contains(token)) {
+            return variable();
+        }
+        else if (Character.isDigit(token)) {
+            return digit();
+        }
+
+        return '0';
+
+    }
+
     static void assign() {
 
         System.out.println("assignment");
-        variable();
+        System.out.println("variable " + token);
+
+        char id = token;
+        nextToken();
 
         if (token != '=') {
             System.err.println("Incomplete statement.");
@@ -130,125 +199,154 @@ public class Compiler {
         }
 
         nextToken();
-        expr();
+        int resultReg = expr();
 
-    }
-
-    static void expr() {
-
-        if (token == '+') {
-            add();
-        }
-        else if (token == '-') {
-            subtract();
-        }
-        else if (token == '*') {
-            multiply();
-        }
-        else if (token == '&') {
-            bitAnd();
-        }
-        else if (token == '|') {
-            bitOr();
-        }
-        else if (letters.contains(token)) {
-            variable();
-        }
-        else if (Character.isDigit(token)) {
-            integer();
-        }
-
-    }
-
-    private static void integer() {
-
-        StringBuilder integer = new StringBuilder();
-        while (Character.isDigit(token)) {
-            integer.append(token);
-            nextToken();
-        }
-        System.out.println("Integer " + integer);
-
-    }
-
-    private static void bitOr() {
-
-        System.out.println("bit OR");
+        codeGen("STORE", String.valueOf(id), Integer.toString(resultReg), null);
 
         nextToken();
-        expr();
-        expr();
 
     }
 
-    private static void bitAnd() {
+    // Cannot move to next token before returning current value. Must move to next token outside of this method.
+    static int variable() {
+        System.out.println("variable " + token);
 
-        System.out.println("bit AND");
+        char var = token;
+        int reg = nextRegister();  // Get the next register number
 
-        nextToken();
-        expr();
-        expr();
+        codeGen("LOAD", Integer.toString(reg), String.valueOf(var), null);  // Use the register number as an integer in the output
 
+        return reg;
     }
 
-    private static void multiply() {
+    private static int digit() {
 
-        System.out.println("multiplication");
+        System.out.println("Digit " + token);
 
-        nextToken();
-        expr();
-        expr();
+        int digitValue = token - '0';
 
+        int reg = nextRegister();
+
+        codeGen("LOADI", Integer.toString(reg), String.valueOf(digitValue), null);
+
+        return reg;
     }
 
-    private static void subtract() {
-
-        System.out.println("subtraction");
-
-        nextToken();
-        expr();
-        expr();
-
-    }
-
-    private static void add() {
+    private static int add() {
 
         System.out.println("addition");
 
+        int leftReg = expr();
         nextToken();
-        expr();
-        expr();
+        int rightReg = expr();
+
+        int resultReg = nextRegister();
+
+        codeGen("ADD", Integer.toString(resultReg), Integer.toString(leftReg), Integer.toString(rightReg));
+
+        return resultReg;
 
     }
 
-    static void variable() {
-        System.out.println("variable " + token);
+    private static int bitOr() {
+
+        System.out.println("bit OR");
+
+        int leftReg = expr();
         nextToken();
+        int rightReg = expr();
+
+        int resultReg = nextRegister();
+
+        codeGen("OR", Integer.toString(resultReg), Integer.toString(leftReg), Integer.toString(rightReg));
+
+        return resultReg;
+
+    }
+
+    private static int bitAnd() {
+
+        System.out.println("bit AND");
+
+        int leftReg = expr();
+        nextToken();
+        int rightReg = expr();
+
+        int resultReg = nextRegister();
+
+        codeGen("AND", Integer.toString(resultReg), Integer.toString(leftReg), Integer.toString(rightReg));
+
+        return resultReg;
+
+    }
+
+    private static int multiply() {
+
+        System.out.println("multiplication");
+
+        int leftReg = expr();
+        nextToken();
+        int rightReg = expr();
+
+        int resultReg = nextRegister();
+
+        codeGen("MUL", Integer.toString(resultReg), Integer.toString(leftReg), Integer.toString(rightReg));
+
+        return resultReg;
+
+    }
+
+    private static int subtract() {
+
+        System.out.println("subtraction");
+
+        int leftReg = expr();
+        nextToken();
+        int rightReg = expr();
+
+        int resultReg = nextRegister();
+
+        codeGen("SUB", Integer.toString(resultReg), Integer.toString(leftReg), Integer.toString(rightReg));
+
+        return resultReg;
+
     }
 
     static void read() {
 
         System.out.println("read");
+
         nextToken();
 
-        if (letters.contains(token)) {
-            System.out.println("variable " + token);
+        if (!letters.contains(token)) {
+            System.err.println("Bad variable name.");
+            System. exit(0);
         }
-
-        nextToken();
+        else {
+            char var = token;
+            System.out.println("variable " + token);
+            nextToken();
+            codeGen("READ", String.valueOf(var), null, null);
+        }
 
     }
 
     static void print() {
 
         System.out.println("print");
+
         nextToken();
 
-        if (letters.contains(token)) {
-            System.out.println("variable " + token);
+        if (!letters.contains(token)) {
+            System.err.println("Bad variable name.");
+            System. exit(0);
         }
-
-        nextToken();
+        else {
+            char var = token;
+            System.out.println("variable " + token);
+            nextToken();
+            codeGen("WRITE", String.valueOf(var), null, null);
+        }
 
     }
 
