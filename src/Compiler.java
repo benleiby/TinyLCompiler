@@ -56,12 +56,9 @@ public class Compiler {
 
         program();
 
-        System.out.println("------------------------------------------------");
-        System.out.println("Target Code");
-        System.out.println("------------------------------------------------");
         for (String o : targetCode) {
-            System.out.println(o);
             output.println(o);
+            System.out.println(o);
         }
 
         output.close();
@@ -110,7 +107,7 @@ public class Compiler {
             System. exit(0);
         }
         else
-            System.out.println(inputFileName + " compiled successfully to: " + outputFileName);
+            System.out.println("Code written to file \n" + outputFileName);
 
     }
 
@@ -129,8 +126,6 @@ public class Compiler {
             System.err.println("Incomplete Statement");
             System. exit(0);
         }
-        else
-            System.out.println("end of statement list");
 
     }
 
@@ -187,9 +182,6 @@ public class Compiler {
 
     static void assign() {
 
-        System.out.println("assignment");
-        System.out.println("variable " + token);
-
         char id = token;
         nextToken();
 
@@ -201,7 +193,7 @@ public class Compiler {
         nextToken();
         int resultReg = expr();
 
-        codeGen("STORE", String.valueOf(id), Integer.toString(resultReg), null);
+        codeGen("STORE", String.valueOf(id), "r"+Integer.toString(resultReg), null);
 
         nextToken();
 
@@ -209,32 +201,27 @@ public class Compiler {
 
     // Cannot move to next token before returning current value. Must move to next token outside of this method.
     static int variable() {
-        System.out.println("variable " + token);
 
         char var = token;
         int reg = nextRegister();  // Get the next register number
 
-        codeGen("LOAD", Integer.toString(reg), String.valueOf(var), null);  // Use the register number as an integer in the output
+        codeGen("LOAD", "r"+Integer.toString(reg), String.valueOf(var), null);  // Use the register number as an integer in the output
 
         return reg;
     }
 
     private static int digit() {
 
-        System.out.println("Digit " + token);
-
         int digitValue = token - '0';
 
         int reg = nextRegister();
 
-        codeGen("LOADI", Integer.toString(reg), String.valueOf(digitValue), null);
+        codeGen("LOADI", "r"+Integer.toString(reg), String.valueOf(digitValue), null);
 
         return reg;
     }
 
     private static int add() {
-
-        System.out.println("addition");
 
         int leftReg = expr();
         nextToken();
@@ -242,7 +229,7 @@ public class Compiler {
 
         int resultReg = nextRegister();
 
-        codeGen("ADD", Integer.toString(resultReg), Integer.toString(leftReg), Integer.toString(rightReg));
+        codeGen("ADD", "r"+Integer.toString(resultReg), "r"+Integer.toString(leftReg), "r"+Integer.toString(rightReg));
 
         return resultReg;
 
@@ -250,15 +237,13 @@ public class Compiler {
 
     private static int bitOr() {
 
-        System.out.println("bit OR");
-
         int leftReg = expr();
         nextToken();
         int rightReg = expr();
 
         int resultReg = nextRegister();
 
-        codeGen("OR", Integer.toString(resultReg), Integer.toString(leftReg), Integer.toString(rightReg));
+        codeGen("OR", "r"+Integer.toString(resultReg), "r"+Integer.toString(leftReg), "r"+Integer.toString(rightReg));
 
         return resultReg;
 
@@ -266,15 +251,13 @@ public class Compiler {
 
     private static int bitAnd() {
 
-        System.out.println("bit AND");
-
         int leftReg = expr();
         nextToken();
         int rightReg = expr();
 
         int resultReg = nextRegister();
 
-        codeGen("AND", Integer.toString(resultReg), Integer.toString(leftReg), Integer.toString(rightReg));
+        codeGen("AND", "r"+Integer.toString(resultReg), "r"+Integer.toString(leftReg), "r"+Integer.toString(rightReg));
 
         return resultReg;
 
@@ -282,15 +265,13 @@ public class Compiler {
 
     private static int multiply() {
 
-        System.out.println("multiplication");
-
         int leftReg = expr();
         nextToken();
         int rightReg = expr();
 
         int resultReg = nextRegister();
 
-        codeGen("MUL", Integer.toString(resultReg), Integer.toString(leftReg), Integer.toString(rightReg));
+        codeGen("MUL", "r"+Integer.toString(resultReg), "r"+Integer.toString(leftReg), "r"+Integer.toString(rightReg));
 
         return resultReg;
 
@@ -298,23 +279,19 @@ public class Compiler {
 
     private static int subtract() {
 
-        System.out.println("subtraction");
-
         int leftReg = expr();
         nextToken();
         int rightReg = expr();
 
         int resultReg = nextRegister();
 
-        codeGen("SUB", Integer.toString(resultReg), Integer.toString(leftReg), Integer.toString(rightReg));
+        codeGen("SUB", "r"+Integer.toString(resultReg), "r"+Integer.toString(leftReg), "r"+Integer.toString(rightReg));
 
         return resultReg;
 
     }
 
     static void read() {
-
-        System.out.println("read");
 
         nextToken();
 
@@ -324,7 +301,6 @@ public class Compiler {
         }
         else {
             char var = token;
-            System.out.println("variable " + token);
             nextToken();
             codeGen("READ", String.valueOf(var), null, null);
         }
@@ -333,8 +309,6 @@ public class Compiler {
 
     static void print() {
 
-        System.out.println("print");
-
         nextToken();
 
         if (!letters.contains(token)) {
@@ -343,7 +317,6 @@ public class Compiler {
         }
         else {
             char var = token;
-            System.out.println("variable " + token);
             nextToken();
             codeGen("WRITE", String.valueOf(var), null, null);
         }
